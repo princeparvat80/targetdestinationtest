@@ -1,56 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import SignupForm from './components/SignupForm';
-import LoginForm from './components/LoginForm';
-import UserForm from './components/UserForm';
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Header from "./components/Header";
+import Landing from "./components/Landing";
+import SignupForm from "./components/SignupForm";
+import LoginForm from "./components/LoginForm";
+import ProfileForm from "./components/ProfileForm";
+import "./App.css";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [view, setView] = useState(''); // '' | 'login' | 'signup'
 
   useEffect(() => {
-    const storedUser = sessionStorage.getItem('loggedInUser');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-      setIsLoggedIn(true);
-    }
+    const userSession = sessionStorage.getItem("loggedInUser");
+    setIsLoggedIn(!!userSession);
   }, []);
 
-  const handleLogin = (user) => {
-    setCurrentUser(user);
-    setIsLoggedIn(true);
-    setView('');
-    sessionStorage.setItem('loggedInUser', JSON.stringify(user));
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCurrentUser(null);
-    setView('');
-    sessionStorage.removeItem('loggedInUser');
-  };
-
   return (
-    <div className="container">
-      <header>
-        <h1>Welcome to SmartForm</h1>
-        <div className="auth-buttons">
-          {isLoggedIn ? (
-            <button onClick={handleLogout}>Logout</button>
-          ) : (
-            <>
-              <button onClick={() => setView('login')}>Login</button>
-              <button onClick={() => setView('signup')}>Sign Up</button>
-            </>
-          )}
-        </div>
-      </header>
-      <main>
-        {!isLoggedIn && view === 'signup' && <SignupForm onSignup={() => setView('login')} />}
-        {!isLoggedIn && view === 'login' && <LoginForm onLogin={handleLogin} />}
-        <UserForm isLoggedIn={isLoggedIn} user={currentUser} />
-      </main>
-    </div>
+    <Router>
+      <div className="main-card-app">
+        <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/signup" element={<SignupForm />} />
+          <Route path="/login" element={<LoginForm setIsLoggedIn={setIsLoggedIn} />} />
+          <Route path="/profile" element={
+            isLoggedIn ? (
+              <ProfileForm />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

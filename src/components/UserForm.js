@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 function UserForm({ isLoggedIn, user }) {
   const [formData, setFormData] = useState({
@@ -12,9 +14,26 @@ function UserForm({ isLoggedIn, user }) {
   const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
-    const storedPreLogin = JSON.parse(sessionStorage.getItem('preLoginData')) || {};
-
-    if (!isLoggedIn) {
+    if (isLoggedIn && user?.uid) {
+      // Load saved profile (if any)
+      getDoc(doc(db, "users", user.uid)).then((userDoc) => {
+        if (userDoc.exists() && userDoc.data().data) {
+          setFormData({
+            ...{
+              firstName: '',
+              lastName: '',
+              email: '',
+              dob: '',
+              gender: '',
+              ecid: ''
+            },
+            ...userDoc.data().data,
+            email: user.username // Set email from auth account
+          });
+        }
+      });
+    } else {
+      const storedPreLogin = JSON.parse(sessionStorage.getItem('preLoginData')) || {};
       setFormData((prev) => ({
         ...prev,
         firstName: storedPreLogin.firstName || '',
@@ -22,17 +41,7 @@ function UserForm({ isLoggedIn, user }) {
         email: storedPreLogin.email || ''
       }));
     }
-
-    if (isLoggedIn && user?.data) {
-      setFormData({
-        firstName: user.data.firstName || '',
-        lastName: user.data.lastName || '',
-        email: user.data.email || '',
-        dob: user.data.dob || '',
-        gender: user.data.gender || '',
-        ecid: user.data.ecid || ''
-      });
-    }
+    // eslint-disable-next-line
   }, [isLoggedIn, user]);
 
   const handleChange = (e) => {
@@ -53,7 +62,7 @@ function UserForm({ isLoggedIn, user }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const requiredFields = ['firstName', 'lastName', 'email'];
     for (const field of requiredFields) {
       if (!formData[field].trim()) {
@@ -68,13 +77,12 @@ function UserForm({ isLoggedIn, user }) {
     }
 
     if (isLoggedIn && user) {
-      const updatedUser = {
-        ...user,
+      // Save to Firestore profile
+      await setDoc(doc(db, "users", user.uid), {
+        username: user.username,
         data: formData
-      };
-      const stored = JSON.parse(localStorage.getItem(`user_${user.username}`));
-      localStorage.setItem(`user_${user.username}`, JSON.stringify({ password: stored.password, data: formData }));
-      sessionStorage.setItem('loggedInUser', JSON.stringify(updatedUser));
+      });
+      sessionStorage.setItem('loggedInUser', JSON.stringify({ ...user, data: formData }));
       alert('Data saved!');
     } else {
       sessionStorage.setItem('preLoginData', JSON.stringify({

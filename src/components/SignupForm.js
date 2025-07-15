@@ -1,37 +1,51 @@
-import React, { useState } from 'react';
-import bcrypt from 'bcryptjs';
+import React, { useState } from "react";
+import { auth } from "../firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
+import Modal from "./SuccessModal";
 
-function SignupForm({ onSignup }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+function SignupForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSignup = () => {
-    if (!username || !password) {
-      alert('Please fill all fields');
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
       return;
     }
-
-    const existingUser = localStorage.getItem(`user_${username}`);
-    if (existingUser) {
-      alert('User already exists!');
-      return;
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      setShowModal(true);
+    } catch (err) {
+      alert(err.message);
     }
+    setLoading(false);
+  };
 
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    localStorage.setItem(`user_${username}`, JSON.stringify({ password: hashedPassword, data: {} }));
-    alert('Signup successful! You can now log in.');
-    setUsername('');
-    setPassword('');
-    onSignup(); // switch to login view
+  const handleModalClose = () => {
+    setShowModal(false);
+    navigate("/login");
   };
 
   return (
-    <div className="auth-form">
-      <h3>Sign Up</h3>
-      <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={handleSignup}>Sign Up</button>
-    </div>
+    <main>
+      <form className="auth-form" style={{ maxWidth: 350, margin: "40px auto" }} onSubmit={handleSignup}>
+        <h3>Sign Up</h3>
+        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required/>
+        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required/>
+        <button type="submit" disabled={loading}>{loading ? "Signing up..." : "Sign Up"}</button>
+      </form>
+      <Modal
+        show={showModal}
+        title="Signup Successful!"
+        message="Your account has been created. Please login to continue."
+        onClose={handleModalClose}
+      />
+    </main>
   );
 }
 
