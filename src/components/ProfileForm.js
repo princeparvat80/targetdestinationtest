@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 function ProfileForm() {
   const currentUserData = JSON.parse(sessionStorage.getItem("loggedInUser") || "{}");
